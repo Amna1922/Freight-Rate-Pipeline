@@ -11,9 +11,11 @@ from sqlalchemy.types import JSON
 
 
 class Settings(BaseSettings):
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/freight_db"
+    database_url: str = "postgresql+asyncpg://freight:freight@localhost:5432/freight"
     fbx_base_url: str = "https://fbxtotal.com"
     wci_base_url: str = "https://www.drewry.co.uk"
+    oilprice_api_key: str = ""
+    oilprice_api_url: str = "https://api.oilpriceapi.com/v1/prices/latest"
     ttl_seconds: int = 604800
     scrape_interval_minutes: int = 60
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -104,8 +106,7 @@ async def fetch_recent_raw_rates(session, origin, destination, mode, container, 
 
 async def upsert_consensus(session, consensus: dict) -> None:
     await session.execute(insert(ConsensusFreightRates).values(**consensus).on_conflict_do_update(
-        index_elements=["origin", "destination", "mode", "container", "valid_for"],
-        set_=consensus))
+        index_elements=["origin", "destination", "mode", "container", "valid_for"], set_=consensus))
     await session.flush()
 
 
@@ -116,7 +117,7 @@ async def get_cached_consensus(session, origin, destination, mode, container):
     ).order_by(ConsensusFreightRates.served_at.desc()))
 
 
-async def write_audit(session, entry_dict: dict) -> None:
+async def write_audit(session: AsyncSession, entry_dict: dict) -> None:
     session.add(AuditLog(**entry_dict))
     await session.flush()
 

@@ -5,6 +5,7 @@ class ScraperError(Exception):
 
 
 from .fbx import fetch_fbx_rates
+from .scfi import fetch_scfi_rates
 from .wci import fetch_wci_rates
 
-__all__ = ["ScraperError", "fetch_fbx_rates", "fetch_wci_rates"]
+__all__ = ["ScraperError", "fetch_fbx_rates", "fetch_wci_rates", "fetch_scfi_rates"]

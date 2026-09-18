@@ -23,7 +23,11 @@ class ConsensusResult:
 
 def source_weight(source_id: str) -> float:
     """Known publishers are trusted equally; unknown feeds are discounted."""
-    return {"SRC-FBX-001": 1.0, "SRC-WCI-001": 1.0}.get(source_id, 0.5)
+    return {
+        "SRC-FBX-001": 1.0,
+        "SRC-WCI-001": 1.0,
+        "SRC-SCFI-001": 1.0,
+    }.get(source_id, 0.5)
 
 
 def _quantile(values: list[Decimal], fraction: Decimal) -> Decimal:

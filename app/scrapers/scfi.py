@@ -8,9 +8,9 @@ from ..db import settings
 from ..models import RawRate
 from . import ScraperError
 
-SOURCE_ID = "SRC-WCI-001"
-PUBLISHER = "Drewry World Container Index"
-INDEX_CODE = "DREWRY_WCI_USD"
+SOURCE_ID = "SRC-SCFI-001"
+PUBLISHER = "Shanghai Containerized Freight Index"
+INDEX_CODE = "SCFI_INDEX"
 USER_AGENT = "FreightRatePipeline/1.0 (+contact@example.com)"
 
 
@@ -20,7 +20,7 @@ def _retrieved_at(value: str | None) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
-async def fetch_wci_rates(client: httpx.AsyncClient, lanes: list[tuple[str, str]]) -> list[RawRate]:
+async def fetch_scfi_rates(client: httpx.AsyncClient, lanes: list[tuple[str, str]]) -> list[RawRate]:
     if not settings.oilprice_api_key:
         raise ScraperError(SOURCE_ID, "OILPRICE_API_KEY is not configured")
     last_error: Exception | None = None
@@ -35,10 +35,10 @@ async def fetch_wci_rates(client: httpx.AsyncClient, lanes: list[tuple[str, str]
             payload = response.json()
             data = payload.get("data", {})
             if payload.get("status") != "success" or data.get("price") is None:
-                raise ValueError("OilPriceAPI response did not contain a successful WCI price")
+                raise ValueError("OilPriceAPI response did not contain a successful SCFI price")
             rate = Decimal(str(data["price"]))
             if rate <= 0:
-                raise ValueError("OilPriceAPI returned a non-positive WCI price")
+                raise ValueError("OilPriceAPI returned a non-positive SCFI price")
             retrieved_at = _retrieved_at(data.get("created_at"))
             return [RawRate(source_id=SOURCE_ID, publisher=PUBLISHER, origin=origin, destination=destination,
                 mode="ocean", container="40HC", rate=rate, currency=data.get("currency", "USD"),

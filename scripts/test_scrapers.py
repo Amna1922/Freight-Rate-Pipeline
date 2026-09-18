@@ -10,7 +10,7 @@ import httpx
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.scrapers import ScraperError, fetch_fbx_rates, fetch_wci_rates
+from app.scrapers import ScraperError, fetch_scfi_rates, fetch_wci_rates
 
 
 LANES = [("CNSHA", "USLAX")]
@@ -33,10 +33,12 @@ async def run_scraper(name: str, fetcher, client: httpx.AsyncClient) -> None:
 
 
 async def main() -> None:
-    timeout = httpx.Timeout(15.0)
-    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
-        await run_scraper("FBX", fetch_fbx_rates, client)
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(15.0),
+        follow_redirects=True,
+    ) as client:
         await run_scraper("WCI", fetch_wci_rates, client)
+        await run_scraper("SCFI", fetch_scfi_rates, client)
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .consensus import ConsensusError, compute_consensus
 from .db import get_session, init_models, settings, write_audit
 from .models import ErrorResponse, FreightRateRequest, FreightRateResponse, FreightRateData, Meta, Freshness, Trust, License, ApiMeta, RateLimit
-from .scrapers import ScraperError, fetch_fbx_rates, fetch_wci_rates
+from .scrapers import ScraperError, fetch_scfi_rates, fetch_wci_rates
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -51,7 +51,11 @@ async def freight_rate(
     warnings: list[str] = []
     lanes = [(request.origin, request.destination)]
     async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
-        results = await asyncio.gather(fetch_fbx_rates(client, lanes), fetch_wci_rates(client, lanes), return_exceptions=True)
+        results = await asyncio.gather(
+            fetch_wci_rates(client, lanes),
+            fetch_scfi_rates(client, lanes),
+            return_exceptions=True,
+        )
     rates = []
     for result in results:
         if isinstance(result, ScraperError):
@@ -62,12 +66,12 @@ async def freight_rate(
             rates.extend(result)
     failed_sources = [
         source_id
-        for source_id, result in zip(("SRC-FBX-001", "SRC-WCI-001"), results)
+        for source_id, result in zip(("SRC-WCI-001", "SRC-SCFI-001"), results)
         if isinstance(result, Exception) or not result
     ]
     if not rates:
         error = ErrorResponse(error="upstream sources unavailable", error_code="UPSTREAM_UNAVAILABLE",
-                              details={"sources_tried": ["SRC-FBX-001", "SRC-WCI-001"],
+                              details={"sources_tried": ["SRC-WCI-001", "SRC-SCFI-001"],
                                        "sources_failed": failed_sources,
                                        "reason": "both sources failed or returned no data"},
                               request_id=request_id, served_at=datetime.now(timezone.utc))
@@ -78,7 +82,7 @@ async def freight_rate(
         error = ErrorResponse(
             error="upstream_unavailable",
             error_code="UPSTREAM_UNAVAILABLE",
-            details={"sources_tried": ["SRC-FBX-001", "SRC-WCI-001"],
+            details={"sources_tried": ["SRC-WCI-001", "SRC-SCFI-001"],
                      "sources_failed": failed_sources,
                      "reason": "fewer than 2 valid rates after outlier rejection"},
             request_id=request_id,
