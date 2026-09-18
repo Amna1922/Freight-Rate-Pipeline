@@ -1,14 +1,14 @@
  
 services:
   db:
-    image: postgres:16-alpine
+    image: ghcr.io/eigenwallet/postgres-pgcron:15
     environment:
       POSTGRES_DB: freight
       POSTGRES_USER: freight
       POSTGRES_PASSWORD: freight
     ports: ["5432:5432"]
     volumes: [freight_data:/var/lib/postgresql/data]
-    command: ["postgres", "-c", "shared_preload_libraries=pg_cron"]
+    command: ["postgres", "-c", "shared_preload_libraries=pg_cron", "-c", "cron.database_name=freight"]
     # pg_cron is installed by a PostgreSQL image in production; this mount keeps
     # the initialization contract explicit for compatible images.
     # volumes can additionally include ./docker/init-pgcron.sql:/docker-entrypoint-initdb.d/01-pgcron.sql
