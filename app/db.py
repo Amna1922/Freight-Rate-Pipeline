@@ -16,7 +16,8 @@ class Settings(BaseSettings):
     wci_base_url: str = "https://www.drewry.co.uk"
     oilprice_api_key: str = ""
     oilprice_api_url: str = "https://api.oilpriceapi.com/v1/prices/latest"
-    ttl_seconds: int = 604800
+    ttl_seconds: int = 86400
+    cache_ttl_seconds: int = 300
     scrape_interval_minutes: int = 60
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -42,7 +43,7 @@ class RawFreightData(Base):
     mode: Mapped[str] = mapped_column(String(16))
     container: Mapped[str] = mapped_column(String(16))
     rate: Mapped[Decimal] = mapped_column(Numeric(18, 4))
-    currency: Mapped[str] = mapped_column(String(3))
+    currency: Mapped[str] = mapped_column(String(16))
     retrieved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     source_url: Mapped[str] = mapped_column(Text)
     payload: Mapped[dict] = mapped_column(Json, default=dict)
@@ -60,7 +61,7 @@ class ConsensusFreightRates(Base):
     median_rate: Mapped[Decimal] = mapped_column(Numeric(18, 4))
     p25_rate: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     p75_rate: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
-    currency: Mapped[str] = mapped_column(String(3))
+    currency: Mapped[str] = mapped_column(String(16))
     sample_size: Mapped[int] = mapped_column(Integer)
     confidence: Mapped[Decimal] = mapped_column(Numeric(4, 3))
     quality_score: Mapped[Decimal] = mapped_column(Numeric(4, 3))
@@ -104,7 +105,7 @@ async def fetch_recent_raw_rates(session, origin, destination, mode, container, 
     return list(result.all())
 
 
-async def upsert_consensus(session, consensus: dict) -> None:
+async def upsert_consensus(session: AsyncSession, consensus: dict) -> None:
     await session.execute(insert(ConsensusFreightRates).values(**consensus).on_conflict_do_update(
         index_elements=["origin", "destination", "mode", "container", "valid_for"], set_=consensus))
     await session.flush()

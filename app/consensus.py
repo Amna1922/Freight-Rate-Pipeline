@@ -52,8 +52,8 @@ def compute_consensus(rates: list[RawRate]) -> ConsensusResult:
         f"outlier rejected: {rate.source_id} rate={rate.rate}"
         for rate in positive if rate not in survivors
     ]
-    if len(survivors) < 2:
-        raise ConsensusError("at least two rates are required after outlier rejection")
+    if not survivors:
+        raise ConsensusError("no rates survived outlier rejection")
     survivor_values = sorted(rate.rate for rate in survivors)
     median_rate = Decimal(str(median(survivor_values)))
     spread = (max(survivor_values) - min(survivor_values)) / median_rate

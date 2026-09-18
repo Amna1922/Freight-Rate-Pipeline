@@ -73,6 +73,7 @@ class RateLimit(BaseModel):
 class ApiMeta(BaseModel):
     latency_ms: int
     rate_limit: RateLimit
+    cache_hit: bool = False
 
 
 class Meta(BaseModel):
