@@ -38,6 +38,8 @@ async def fetch_fbx_rates(client: httpx.AsyncClient, lanes: list[tuple[str, str]
                         destination=destination, mode="ocean", container="40HC",
                         rate=Decimal(str(value).replace(",", "")), retrieved_at=datetime.now(timezone.utc),
                         source_url=str(response.url)))
+            if not result:
+                raise ValueError("no FBX rates matched requested lanes")
             return result
         except (httpx.TimeoutException, httpx.NetworkError, httpx.HTTPStatusError, ValueError) as exc:
             last = exc

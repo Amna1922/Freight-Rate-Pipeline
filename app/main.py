@@ -7,6 +7,7 @@ from uuid import uuid4
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -59,15 +60,31 @@ async def freight_rate(
             warnings.append("source_down: unknown")
         else:
             rates.extend(result)
+    failed_sources = [
+        source_id
+        for source_id, result in zip(("SRC-FBX-001", "SRC-WCI-001"), results)
+        if isinstance(result, Exception) or not result
+    ]
     if not rates:
         error = ErrorResponse(error="upstream sources unavailable", error_code="UPSTREAM_UNAVAILABLE",
-                              details="both freight-rate sources failed or returned no data",
+                              details={"sources_tried": ["SRC-FBX-001", "SRC-WCI-001"],
+                                       "sources_failed": failed_sources,
+                                       "reason": "both sources failed or returned no data"},
                               request_id=request_id, served_at=datetime.now(timezone.utc))
-        raise HTTPException(status_code=503, detail=error.model_dump(mode="json"))
+        return JSONResponse(status_code=503, content=error.model_dump(mode="json"))
     try:
         consensus = compute_consensus(rates)
-    except ConsensusError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ConsensusError:
+        error = ErrorResponse(
+            error="upstream_unavailable",
+            error_code="UPSTREAM_UNAVAILABLE",
+            details={"sources_tried": ["SRC-FBX-001", "SRC-WCI-001"],
+                     "sources_failed": failed_sources,
+                     "reason": "fewer than 2 valid rates after outlier rejection"},
+            request_id=request_id,
+            served_at=datetime.now(timezone.utc),
+        )
+        return JSONResponse(status_code=503, content=error.model_dump(mode="json"))
     now = datetime.now(timezone.utc)
     latest = max(rate.retrieved_at for rate in rates)
     age = max(0, int((now - latest).total_seconds()))
