@@ -1,1 +1,24 @@
  
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: freight
+      POSTGRES_USER: freight
+      POSTGRES_PASSWORD: freight
+    ports: ["5432:5432"]
+    volumes: [freight_data:/var/lib/postgresql/data]
+    command: ["postgres", "-c", "shared_preload_libraries=pg_cron"]
+    # pg_cron is installed by a PostgreSQL image in production; this mount keeps
+    # the initialization contract explicit for compatible images.
+    # volumes can additionally include ./docker/init-pgcron.sql:/docker-entrypoint-initdb.d/01-pgcron.sql
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://freight:freight@db:5432/freight
+    ports: ["8000:8000"]
+    depends_on: [db]
+volumes:
+  freight_data:
